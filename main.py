@@ -1,18 +1,19 @@
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 
 from controller.user_controller import router as user_router
 from repository.database import database
 
+app = FastAPI()
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+
+@app.on_event("startup")
+async def startup():
     await database.connect()
-    yield
+
+
+@app.on_event("shutdown")
+async def shutdown():
     await database.disconnect()
 
-
-app = FastAPI(title="Poll System - User Service", lifespan=lifespan)
 
 app.include_router(user_router)

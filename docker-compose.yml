@@ -1,40 +1,30 @@
 services:
-  mysql:
+  db:
     image: mysql:8.0
-    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: user_service
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      - MYSQL_DATABASE=user_service
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=root_password
     ports:
       - "3308:3306"
     volumes:
-      - ./resources/db-migrations:/docker-entrypoint-initdb.d
-      - mysql_data:/var/lib/mysql
+      - ./resources/db-migrations:/docker-entrypoint-initdb.d/
+    command: --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-proot_password"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot_password"]
       interval: 5s
-      timeout: 5s
       retries: 20
 
   app:
     build: .
-    restart: unless-stopped
     environment:
-      MYSQL_HOST: mysql
-      MYSQL_PORT: 3306
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-      MYSQL_DATABASE: user_service
-      POLL_SERVICE_URL: http://host.docker.internal:8002
+      - DATABASE_URL=mysql+aiomysql://user:password@db:3306/user_service
+      - POLL_SERVICE_URL=http://host.docker.internal:8002
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
       - "8001:8000"
     depends_on:
-      mysql:
+      db:
         condition: service_healthy
-
-volumes:
-  mysql_data:
